@@ -1,0 +1,42 @@
+{% extends "importaciones/base.html" %}
+{% block title %}Importación{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h3 class="mb-1">{{ imp.referencia|default:"Importación" }}</h3>
+    <div class="text-muted">
+      {{ imp.fecha }} · {{ imp.incoterm }} · {{ imp.pol }} → {{ imp.pod }} · {{ imp.kilos_estimados }} kg · Base {{ imp.moneda_base }}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'importaciones:importacion_edit' imp.id %}">Editar</a>
+    <a class="btn btn-primary" href="{% url 'importaciones:cotizacion_create' imp.id %}">➕ Nueva cotización</a>
+  </div>
+</div>
+
+<h5>Cotizaciones</h5>
+<table class="table table-sm bg-white">
+  <thead>
+    <tr>
+      <th>Nombre</th>
+      <th>Activa</th>
+      <th class="text-end">Total</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in cotizaciones %}
+    <tr>
+      <td>{{ c.nombre }}</td>
+      <td>{% if c.activa %}✅{% else %}—{% endif %}</td>
+      <td class="text-end">{{ c.total }}</td>
+      <td class="text-end">
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'importaciones:cotizacion_detail' c.id %}">Abrir</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">No hay cotizaciones aún.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

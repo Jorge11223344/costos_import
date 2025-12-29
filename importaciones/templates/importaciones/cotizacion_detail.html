@@ -1,0 +1,76 @@
+{% extends "importaciones/base.html" %}
+{% block title %}Cotización{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h3 class="mb-1">{{ cot.nombre }}</h3>
+    <div class="text-muted">
+      Importación: <a href="{% url 'importaciones:importacion_detail' imp.id %}">{{ imp.referencia|default:"(sin referencia)" }}</a>
+      · Base {{ imp.moneda_base }}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'importaciones:cotizacion_edit' cot.id %}">Editar</a>
+    <a class="btn btn-primary" href="{% url 'importaciones:item_create' cot.id %}">➕ Agregar ítem</a>
+  </div>
+</div>
+
+<table class="table table-sm table-striped bg-white">
+  <thead>
+    <tr>
+      <th>Categoría</th>
+      <th>Tipo costo</th>
+      <th>Empresa</th>
+      <th>Descripción</th>
+      <th class="text-end">Monto</th>
+      <th class="text-end">TC</th>
+      <th class="text-end">Subt.</th>
+      <th class="text-end">IVA</th>
+      <th class="text-end">Total</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in items %}
+    <tr>
+      <td>{{ it.tipo_costo.get_categoria_display }}</td>
+      <td>{{ it.tipo_costo.nombre }}</td>
+      <td>{{ it.empresa.nombre|default:"—" }}</td>
+      <td>{{ it.descripcion }}</td>
+      <td class="text-end">{{ it.monto }} {{ it.moneda }}</td>
+      <td class="text-end">{{ it.tipo_cambio }}</td>
+      <td class="text-end">{{ it.subtotal_en_moneda_base }}</td>
+      <td class="text-end">{{ it.iva_en_moneda_base }}</td>
+      <td class="text-end"><strong>{{ it.total_en_moneda_base }}</strong></td>
+      <td class="text-end">
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'importaciones:item_edit' it.id %}">Editar</a>
+        <a class="btn btn-sm btn-outline-danger" href="{% url 'importaciones:item_delete' it.id %}">X</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="10">No hay ítems aún.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="row g-2">
+  <div class="col-md-4">
+    <div class="p-3 bg-white border rounded">
+      <div class="text-muted">Total sin IVA</div>
+      <div class="fs-5"><strong>{{ total_sin_iva }}</strong></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="p-3 bg-white border rounded">
+      <div class="text-muted">IVA</div>
+      <div class="fs-5"><strong>{{ total_iva }}</strong></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="p-3 bg-white border rounded">
+      <div class="text-muted">Total</div>
+      <div class="fs-5"><strong>{{ total }}</strong></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

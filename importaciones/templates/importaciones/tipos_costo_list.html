@@ -1,0 +1,14 @@
+{% extends "importaciones/base.html" %}
+{% block content %}
+<h3>Tipos de costo</h3>
+<table class="table table-sm bg-white">
+  <thead><tr><th>Categoría</th><th>Nombre</th><th>Activo</th></tr></thead>
+  <tbody>
+  {% for t in tipos %}
+    <tr><td>{{ t.get_categoria_display }}</td><td>{{ t.nombre }}</td><td>{% if t.activo %}✅{% else %}—{% endif %}</td></tr>
+  {% empty %}
+    <tr><td colspan="3">No hay tipos.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

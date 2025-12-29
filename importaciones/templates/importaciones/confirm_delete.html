@@ -1,0 +1,12 @@
+{% extends "importaciones/base.html" %}
+{% block content %}
+<h3>Confirmar eliminación</h3>
+<div class="bg-white p-3 border rounded">
+  <p>¿Eliminar: <strong>{{ obj }}</strong>?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger" type="submit">Sí, eliminar</button>
+    <a class="btn btn-outline-secondary" href="javascript:history.back()">Cancelar</a>
+  </form>
+</div>
+{% endblock %}
