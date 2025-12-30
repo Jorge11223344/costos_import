@@ -17,7 +17,7 @@ class TipoCostoForm(forms.ModelForm):
 class ImportacionForm(forms.ModelForm):
     class Meta:
         model = Importacion
-        fields = ["fecha", "referencia", "incoterm", "pol", "pod", "kilos_estimados", "moneda_base"]
+        fields = ["fecha", "referencia", "incoterm", "pol", "pod", "kilos_estimados", "kilos_merma", "moneda_base"]
 
 
 class CotizacionForm(forms.ModelForm):

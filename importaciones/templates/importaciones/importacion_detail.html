@@ -20,7 +20,7 @@
     <tr>
       <th>Nombre</th>
       <th>Activa</th>
-      <th class="text-end">Total</th>
+      <th class="text-end">Total iva incl</th>
       <th></th>
     </tr>
   </thead>
@@ -29,7 +29,7 @@
     <tr>
       <td>{{ c.nombre }}</td>
       <td>{% if c.activa %}✅{% else %}—{% endif %}</td>
-      <td class="text-end">{{ c.total }}</td>
+      <td class="text-end">{{ c.total|floatformat:1 }}</td>
       <td class="text-end">
         <a class="btn btn-sm btn-outline-primary" href="{% url 'importaciones:cotizacion_detail' c.id %}">Abrir</a>
       </td>

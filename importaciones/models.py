@@ -62,6 +62,12 @@ class Importacion(models.Model):
     pod = models.CharField(max_length=80, blank=True, help_text="Puerto destino (POD)")
 
     kilos_estimados = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    kilos_merma = models.DecimalField(
+    max_digits=12,
+    decimal_places=2,
+    default=0,
+    help_text="Kilos perdidos por rotura, humedad, polvo, etc."
+)
     moneda_base = models.CharField(max_length=10, default="CLP", help_text="CLP / USD / CNY")
 
     creado_en = models.DateTimeField(auto_now_add=True)

@@ -1,4 +1,6 @@
 {% extends "importaciones/base.html" %}
+
+{% load humanize %}
 {% block title %}Importaciones{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -13,7 +15,9 @@
       <th>Referencia</th>
       <th>Incoterm</th>
       <th>POL → POD</th>
-      <th>Kg</th>
+      <th>Kg estimados</th>
+      <th>Merma</th>
+      <th>Kg útiles</th>
       <th></th>
     </tr>
   </thead>
@@ -24,8 +28,18 @@
       <td>{{ imp.referencia }}</td>
       <td>{{ imp.incoterm }}</td>
       <td>{{ imp.pol }} → {{ imp.pod }}</td>
-      <td>{{ imp.kilos_estimados }}</td>
-      <td class="text-end">
+      <td class="text-center">
+        {{ imp.kilos_estimados|floatformat:0|intcomma }}
+      </td>
+
+      <td class="text-center">
+        {{ imp.kilos_merma|default:0|floatformat:0|intcomma }}
+      </td>
+
+      <td class="text-center">
+        {{ imp.kilos_utiles|floatformat:0|intcomma }}
+      </td>
+      <td class="text-center">
         <a class="btn btn-sm btn-outline-primary" href="{% url 'importaciones:importacion_detail' imp.id %}">Ver</a>
       </td>
     </tr>

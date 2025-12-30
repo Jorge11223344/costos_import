@@ -6,6 +6,7 @@ TIPOS = [
     ("Documentación origen", "origen"),
     ("Transporte interno origen", "origen"),
     ("THC origen", "origen"),
+    ("Costo del producto (FOB)", "origen"),
 
     ("Flete marítimo", "internacional"),
     ("Seguro", "internacional"),
@@ -14,12 +15,14 @@ TIPOS = [
 
     ("THC destino", "destino"),
     ("Servicios terminal / TATC", "destino"),
+    ("Servicios portuarios", "destino"), 
     ("Almacenaje puerto", "destino"),
     ("Aforo / inspección", "destino"),
     ("Demurrage / Detention", "destino"),
 
     ("Agencia de aduana (honorarios)", "aduana"),
     ("Gastos aduaneros varios", "aduana"),
+    ("Servicios aduaneros (SAG / inspecciones)", "aduana"),
 
     ("Transporte puerto → bodega", "local"),
     ("Descarga / grúa / estiba", "local"),
@@ -28,6 +31,8 @@ TIPOS = [
 
     ("Comisiones bancarias", "financiero"),
     ("Costos de pago internacional", "financiero"),
+
+    ("Otros gastos", "otro"),
 ]
 
 class Command(BaseCommand):

@@ -3,6 +3,7 @@ from django.contrib import messages
 
 from .models import Importacion, Cotizacion, CotizacionItem, Empresa, TipoCosto
 from .forms import ImportacionForm, CotizacionForm, CotizacionItemForm, EmpresaForm, TipoCostoForm
+from decimal import Decimal
 
 
 # -----------------------
@@ -10,6 +11,9 @@ from .forms import ImportacionForm, CotizacionForm, CotizacionItemForm, EmpresaF
 # -----------------------
 def importaciones_list(request):
     importaciones = Importacion.objects.order_by("-fecha", "-id")
+    for imp in importaciones:
+        imp.kilos_utiles = (imp.kilos_estimados or 0) - (imp.kilos_merma or 0)
+
     return render(request, "importaciones/importaciones_list.html", {"importaciones": importaciones})
 
 
@@ -63,27 +67,64 @@ def cotizacion_create(request, importacion_id):
     return render(request, "importaciones/form.html", {"form": form, "titulo": "Nueva cotización"})
 
 
+from decimal import Decimal
+
 def cotizacion_detail(request, cotizacion_id):
     cot = get_object_or_404(Cotizacion, id=cotizacion_id)
-    items = cot.items.select_related("tipo_costo", "empresa").order_by("tipo_costo__categoria", "tipo_costo__nombre", "id")
 
-    # Totales por categoría (opcional, pero útil)
+    items = cot.items.select_related(
+        "tipo_costo", "empresa"
+    ).order_by(
+        "tipo_costo__categoria",
+        "tipo_costo__nombre",
+        "id"
+    )
+
+    imp = cot.importacion
+
+    kilos_estimados = imp.kilos_estimados or Decimal("0")
+    kilos_merma = getattr(imp, "kilos_merma", Decimal("0")) or Decimal("0")
+
+    kilos_utiles = kilos_estimados - kilos_merma
+    if kilos_utiles < 0:
+        kilos_utiles = Decimal("0")
+
+    costo_por_kg = None
+    if kilos_utiles > 0:
+        costo_por_kg = cot.total_sin_iva() / kilos_utiles
+
+    costo_saco_8 = None
+    costo_saco_20 = None
+
+    if costo_por_kg is not None:
+        costo_saco_8 = costo_por_kg * Decimal("8")
+        costo_saco_20 = costo_por_kg * Decimal("20")
+
     totales_categoria = {}
     for it in items:
         cat = it.tipo_costo.categoria
-        totales_categoria.setdefault(cat, 0)
-        totales_categoria[cat] += float(it.total_en_moneda_base())
+        totales_categoria.setdefault(cat, Decimal("0"))
+        totales_categoria[cat] += it.total_en_moneda_base()
 
     context = {
         "cot": cot,
-        "imp": cot.importacion,
+        "imp": imp,
         "items": items,
         "total": cot.total(),
         "total_sin_iva": cot.total_sin_iva(),
         "total_iva": cot.total_iva(),
+        "costo_por_kg": costo_por_kg,
+        "kilos_estimados": kilos_estimados,
+        "kilos_merma": kilos_merma,
+        "kilos_utiles": kilos_utiles,
         "totales_categoria": totales_categoria,
+        "costo_por_kg": costo_por_kg,
+        "costo_saco_8": costo_saco_8,
+        "costo_saco_20": costo_saco_20,
     }
+
     return render(request, "importaciones/cotizacion_detail.html", context)
+
 
 
 def cotizacion_edit(request, cotizacion_id):

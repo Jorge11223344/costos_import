@@ -9,13 +9,50 @@
 <body class="bg-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
-    <a class="navbar-brand" href="{% url 'importaciones:importaciones_list' %}">Costeo Importación</a>
-    <div class="d-flex gap-2">
-      <a class="btn btn-outline-light btn-sm" href="{% url 'importaciones:empresas_list' %}">Empresas</a>
-      <a class="btn btn-outline-light btn-sm" href="{% url 'importaciones:tipos_costo_list' %}">Tipos de costo</a>
+
+    <!-- Título a la izquierda -->
+    <span class="navbar-brand">
+      Costeo Importación
+    </span>
+
+    <!-- Empujador para mandar botones a la derecha -->
+    <div class="ms-auto d-flex gap-2">
+
+      <a class="btn btn-sm
+         {% if '/importaciones/' in request.path and '/empresas/' not in request.path and '/tipos-costo/' not in request.path %}
+           btn-light
+         {% else %}
+           btn-outline-light
+         {% endif %}"
+         href="{% url 'importaciones:importaciones_list' %}">
+        Importaciones
+      </a>
+
+      <a class="btn btn-sm
+         {% if '/empresas/' in request.path %}
+           btn-light
+         {% else %}
+           btn-outline-light
+         {% endif %}"
+         href="{% url 'importaciones:empresas_list' %}">
+        Empresas
+      </a>
+
+      <a class="btn btn-sm
+         {% if '/tipos-costo/' in request.path %}
+           btn-light
+         {% else %}
+           btn-outline-light
+         {% endif %}"
+         href="{% url 'importaciones:tipos_costo_list' %}">
+        Tipos de costo
+      </a>
+
     </div>
   </div>
 </nav>
+
+
 
 <div class="container my-4">
   {% if messages %}

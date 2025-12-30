@@ -1,4 +1,8 @@
 {% extends "importaciones/base.html" %}
+{% load l10n %}          {# para localize #}
+{% load humanize %}      {# opcional, no imprescindible #}
+
+
 {% block title %}Cotización{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -38,10 +42,10 @@
       <td>{{ it.empresa.nombre|default:"—" }}</td>
       <td>{{ it.descripcion }}</td>
       <td class="text-end">{{ it.monto }} {{ it.moneda }}</td>
-      <td class="text-end">{{ it.tipo_cambio }}</td>
-      <td class="text-end">{{ it.subtotal_en_moneda_base }}</td>
-      <td class="text-end">{{ it.iva_en_moneda_base }}</td>
-      <td class="text-end"><strong>{{ it.total_en_moneda_base }}</strong></td>
+      <td class="text-end">{{ it.tipo_cambio|floatformat:2|intcomma }}</td>
+      <td class="text-end">{{ it.subtotal_en_moneda_base|floatformat:1|intcomma }}</td>
+      <td class="text-end">{{ it.iva_en_moneda_base|floatformat:1|intcomma }}</td>
+      <td class="text-end"><strong>{{ it.total_en_moneda_base|floatformat:1|intcomma }}</strong></td>
       <td class="text-end">
         <a class="btn btn-sm btn-outline-secondary" href="{% url 'importaciones:item_edit' it.id %}">Editar</a>
         <a class="btn btn-sm btn-outline-danger" href="{% url 'importaciones:item_delete' it.id %}">X</a>
@@ -54,23 +58,66 @@
 </table>
 
 <div class="row g-2">
-  <div class="col-md-4">
+  <div class="col-md-3">
     <div class="p-3 bg-white border rounded">
       <div class="text-muted">Total sin IVA</div>
-      <div class="fs-5"><strong>{{ total_sin_iva }}</strong></div>
+      <div class="fs-5"><strong>{{ total_sin_iva|floatformat:1|intcomma }}</strong></div>
     </div>
   </div>
-  <div class="col-md-4">
+
+  <div class="col-md-3">
     <div class="p-3 bg-white border rounded">
       <div class="text-muted">IVA</div>
-      <div class="fs-5"><strong>{{ total_iva }}</strong></div>
+      <div class="fs-5"><strong>{{ total_iva|floatformat:1|intcomma }}</strong></div>
     </div>
   </div>
-  <div class="col-md-4">
+
+  <div class="col-md-3">
     <div class="p-3 bg-white border rounded">
       <div class="text-muted">Total</div>
-      <div class="fs-5"><strong>{{ total }}</strong></div>
+      <div class="fs-5"><strong>{{ total|floatformat:1|intcomma }}</strong></div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="p-3 bg-white border rounded">
+      <div class="text-muted">Costo por kilo (sin IVA)</div>
+      <div class="fs-5">
+        <strong>
+          {% if costo_por_kg %}
+            {{ costo_por_kg|floatformat:2|intcomma }}
+          {% else %}
+            —
+          {% endif %}
+        </strong>
+        <span class="text-muted">CLP/kg</span>
+      </div>
+      <div class="text-muted small">
+        Kilos importación: {{ kilos|floatformat:0|intcomma }}
+      </div>
     </div>
   </div>
 </div>
+<div class="row g-2 mt-2">
+  
+
+  <div class="col-md-4">
+    <div class="p-3 bg-white border rounded">
+      <div class="text-muted">Costo saco 8 kg sin iva</div>
+      <div class="fs-5 fw-semibold">
+        {{ costo_saco_8|floatformat:0|intcomma }} CLP
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="p-3 bg-white border rounded">
+      <div class="text-muted">Costo saco 20 kg sin iva</div>
+      <div class="fs-5 fw-semibold">
+        {{ costo_saco_20|floatformat:0|intcomma }} CLP
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

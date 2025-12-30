@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",
+
     "importaciones",
 ]
 
@@ -125,3 +127,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+
+LANGUAGE_CODE = "es-cl"
+USE_L10N = False
+USE_THOUSAND_SEPARATOR = True
+THOUSAND_SEPARATOR = "."
+DECIMAL_SEPARATOR = ","
