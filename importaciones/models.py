@@ -61,14 +61,14 @@ class Importacion(models.Model):
     pol = models.CharField(max_length=80, blank=True, help_text="Puerto origen (POL)")
     pod = models.CharField(max_length=80, blank=True, help_text="Puerto destino (POD)")
 
-    kilos_estimados = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    kilos_estimados = models.DecimalField(max_digits=12, decimal_places=1, default=0)
     kilos_merma = models.DecimalField(
     max_digits=12,
     decimal_places=2,
     default=0,
     help_text="Kilos perdidos por rotura, humedad, polvo, etc."
 )
-    moneda_base = models.CharField(max_length=10, default="CLP", help_text="CLP / USD / CNY")
+    moneda_base = models.CharField(max_length=10, default="CLP", help_text="CLP ")
 
     creado_en = models.DateTimeField(auto_now_add=True)
 
@@ -103,11 +103,11 @@ class CotizacionItem(models.Model):
 
     descripcion = models.CharField(max_length=200, blank=True)
 
-    monto = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    monto = models.DecimalField(max_digits=14, decimal_places=1, default=0)
     moneda = models.CharField(max_length=10, default="CLP")  # CLP/USD/CNY
 
     # Convierte desde "moneda" a "moneda_base" de la importación. Por ahora lo ingresas tú.
-    tipo_cambio = models.DecimalField(max_digits=14, decimal_places=4, default=1)
+    tipo_cambio = models.DecimalField(max_digits=14, decimal_places=2, default=1)
 
     aplica_iva = models.BooleanField(default=True)
     iva_pct = models.DecimalField(max_digits=5, decimal_places=2, default=19)

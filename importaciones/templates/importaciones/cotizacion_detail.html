@@ -41,8 +41,8 @@
       <td>{{ it.tipo_costo.nombre }}</td>
       <td>{{ it.empresa.nombre|default:"—" }}</td>
       <td>{{ it.descripcion }}</td>
-      <td class="text-end">{{ it.monto }} {{ it.moneda }}</td>
-      <td class="text-end">{{ it.tipo_cambio|floatformat:2|intcomma }}</td>
+      <td class="text-end">{{ it.monto|floatformat:1|intcomma }} {{ it.moneda }}</td>
+      <td class="text-end">{{ it.tipo_cambio|floatformat:1|intcomma }}</td>
       <td class="text-end">{{ it.subtotal_en_moneda_base|floatformat:1|intcomma }}</td>
       <td class="text-end">{{ it.iva_en_moneda_base|floatformat:1|intcomma }}</td>
       <td class="text-end"><strong>{{ it.total_en_moneda_base|floatformat:1|intcomma }}</strong></td>
@@ -85,7 +85,7 @@
       <div class="fs-5">
         <strong>
           {% if costo_por_kg %}
-            {{ costo_por_kg|floatformat:2|intcomma }}
+            {{ costo_por_kg|floatformat:1|intcomma }}
           {% else %}
             —
           {% endif %}
