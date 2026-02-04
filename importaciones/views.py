@@ -67,8 +67,6 @@ def cotizacion_create(request, importacion_id):
     return render(request, "importaciones/form.html", {"form": form, "titulo": "Nueva cotización"})
 
 
-from decimal import Decimal
-
 def cotizacion_detail(request, cotizacion_id):
     cot = get_object_or_404(Cotizacion, id=cotizacion_id)
 
@@ -124,7 +122,6 @@ def cotizacion_detail(request, cotizacion_id):
     }
 
     return render(request, "importaciones/cotizacion_detail.html", context)
-
 
 
 def cotizacion_edit(request, cotizacion_id):
@@ -205,3 +202,15 @@ def empresa_create(request):
 def tipos_costo_list(request):
     tipos = TipoCosto.objects.order_by("categoria", "nombre")
     return render(request, "importaciones/tipos_costo_list.html", {"tipos": tipos})
+
+
+def tipo_costo_create(request):
+    if request.method == "POST":
+        form = TipoCostoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Tipo de costo creado.")
+            return redirect("importaciones:tipos_costo_list")
+    else:
+        form = TipoCostoForm()
+    return render(request, "importaciones/form.html", {"form": form, "titulo": "Nuevo tipo de costo"})
