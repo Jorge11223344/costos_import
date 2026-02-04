@@ -25,15 +25,21 @@ SECRET_KEY = "django-insecure-t=0*v3ruy@u-$9pp#5!-8uv#wtp91w$nw97n72d8kptl9d)y#w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost",
+ALLOWED_HOSTS = [
+    "localhost",
+    "192.168.0.29",  # <-- Agregué la coma que faltaba y quité el :8001
     "127.0.0.1",
-    ".github.dev",]
+    ".github.dev",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.github.dev",
     "https://*.app.github.dev",
     "https://localhost:8000",
     "http://localhost:8000",
+    "http://localhost:8001",  # <-- Agregué localhost:8001
+    "http://192.168.0.29:8001",  # <-- Aquí sí va con el puerto
+    "http://192.168.0.29:8001/",  # <-- Mantuve tu versión con /
 ]
 
 
