@@ -29,6 +29,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "192.168.0.29",  # <-- Agregué la coma que faltaba y quité el :8001
     "127.0.0.1",
+    "100.71.205.69"
     ".github.dev",
 ]
 
@@ -39,7 +40,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://localhost:8001",  # <-- Agregué localhost:8001
     "http://192.168.0.29:8001",  # <-- Aquí sí va con el puerto
-    "http://192.168.0.29:8001/",  # <-- Mantuve tu versión con /
+    "http://192.168.0.29:8001/",
+    "http://100.71.205.69",
 ]
 
 
