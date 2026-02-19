@@ -41,7 +41,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8001",  # <-- Agregué localhost:8001
     "http://192.168.0.29:8001",  # <-- Aquí sí va con el puerto
     "http://192.168.0.29:8001/",
-    "http://100.71.205.69",
+    "http://100.71.205.69/",
 ]
 
 
