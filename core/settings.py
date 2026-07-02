@@ -28,7 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "localhost",
     "192.168.1.18",
-    "100.71.205.69"
+    "100.71.205.69",
     "192.168.0.29",  # <-- Agregué la coma que faltaba y quité el :8001
     "127.0.0.1",
     ".github.dev",
