@@ -32,6 +32,7 @@ ALLOWED_HOSTS = [
     "192.168.0.29",  # <-- Agregué la coma que faltaba y quité el :8001
     "127.0.0.1",
     ".github.dev",
+    "ubuntu-server.tail773deb.ts.net",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -45,6 +46,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://192.168.1.18:8001",
     "http://192.168.1.18:8001/",
     "http://100.71.205.69:8001/",
+    "https://ubuntu-server.tail773deb.ts.net:8444",
 ]
 
 
