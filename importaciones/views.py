@@ -219,17 +219,34 @@ def tipo_costo_create(request):
 # -----------------------
 # Dashboard / Reporting
 # -----------------------
+# Dashboard / Reporting
+# -----------------------
 def dashboard(request):
     # ----- Filter: importaciones seleccionadas via GET -----
     # Parámetro: ?importacion_ids=1&importacion_ids=3  (lista múltiple)
     selected_ids = request.GET.getlist("importacion_ids")
     # Convertir a enteros para comparar con los IDs de la BD
     selected_ids = [int(id) for id in selected_ids] if selected_ids else []
-    # Si no hay selección explícita, mostramos todas (initial behavior)
+    # Filtro por estado
+    selected_estado = request.GET.get("estado", "")
+
+    # 1. Crear queryset base con todas las importaciones
+    importaciones_seleccionadas = Importacion.objects.all()
+
+    # 2. Filtrar por estado (si viene parámetro)
+    if selected_estado:
+        importaciones_seleccionadas = importaciones_seleccionadas.filter(
+            estado=selected_estado
+        )
+
+    # 3. Filtrar por IDs seleccionados (si vienen parámetros)
     if selected_ids:
-        importaciones_seleccionadas = Importacion.objects.filter(id__in=selected_ids)
-    else:
-        importaciones_seleccionadas = Importacion.objects.order_by("-fecha", "-id")
+        importaciones_seleccionadas = importaciones_seleccionadas.filter(
+            id__in=selected_ids
+        )
+
+    # 4. Ordenar por fecha descendente
+    importaciones_seleccionadas = importaciones_seleccionadas.order_by("-fecha", "-id")
 
     # Derivadas de la selección
     cotizaciones_seleccionadas = Cotizacion.objects.filter(
@@ -289,6 +306,8 @@ def dashboard(request):
     context = {
         "importaciones": importaciones_seleccionadas,
         "selected_ids": selected_ids,
+        "selected_estado": selected_estado,
+        "estados": Importacion.Estado.choices,
         "cantidad_importaciones_seleccionadas": cantidad_importaciones_seleccionadas,
         "cantidad_cotizaciones_seleccionadas": cantidad_cotizaciones_seleccionadas,
         "valor_total_cotizado": valor_total_cotizado,

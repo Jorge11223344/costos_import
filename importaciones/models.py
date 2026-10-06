@@ -55,6 +55,12 @@ class Importacion(models.Model):
         CFR = "CFR", "CFR"
         DDP = "DDP", "DDP"
 
+    class Estado(models.TextChoices):
+        SIMULACION = "simulacion", "Simulación"
+        EN_CURSO = "en_curso", "En curso"
+        FINALIZADA = "finalizada", "Finalizada"
+        CANCELADA = "cancelada", "Cancelada"
+
     fecha = models.DateField(default=timezone.localdate)
     referencia = models.CharField(max_length=120, blank=True, help_text="Ej: Contenedor Tianjin Sep-2025")
     incoterm = models.CharField(max_length=10, choices=Incoterm.choices, default=Incoterm.FOB)
@@ -69,6 +75,8 @@ class Importacion(models.Model):
     help_text="Kilos perdidos por rotura, humedad, polvo, etc."
 )
     moneda_base = models.CharField(max_length=10, default="CLP", help_text="CLP ")
+
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.EN_CURSO)
 
     creado_en = models.DateTimeField(auto_now_add=True)
 

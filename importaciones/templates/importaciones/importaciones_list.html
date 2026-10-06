@@ -19,6 +19,7 @@
       <th>Kg estimados</th>
       <th>Merma</th>
       <th>Kg útiles</th>
+      <th>Estado</th>
       <th></th>
     </tr>
   </thead>
@@ -40,12 +41,19 @@
       <td class="text-center">
         {{ imp.kilos_utiles|floatformat:0|intcomma }}
       </td>
+
+      <td class="text-center">
+        <span class="badge badge-{{ imp.get_estado_display|lower }}">
+          {{ imp.get_estado_display }}
+        </span>
+      </td>
+
       <td class="text-center">
         <a class="btn btn-sm btn-outline-primary" href="{% url 'importaciones:importacion_detail' imp.id %}">Ver</a>
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="6">No hay importaciones aún.</td></tr>
+    <tr><td colspan="7">No hay importaciones aún.</td></tr>
     {% endfor %}
   </tbody>
 </table>

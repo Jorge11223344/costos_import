@@ -28,13 +28,22 @@
                   <p class="small text-muted">No hay importaciones disponibles.</p>
                 {% endfor %}
               </div>
-              <div class="col-12 col-md-8">
+<div class="col-12 col-md-8">
+                <h6 class="small text-muted mb-2">Filtrar por estado</h6>
+                <select name="estado" class="form-select form-select-sm">
+                  <option value="">Todas</option>
+                  {% for valor, nombre in estados %}
+                    <option value="{{ valor }}" {% if selected_estado == valor %}selected{% endif %}>
+                      {{ nombre }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <small class="text-muted mt-1">Si no selecciona nada, se considerarán todas las importaciones.</small>
                 <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">Aplicar filtro</button>
                 <a href="" class="btn btn-sm btn-outline-secondary w-100 mt-2" onclick="toggleCheckboxes(document.forms[0], false); return false">Limpiar selección</a>
               </div>
-            </form>
 
-<script>
+            <script>
 function toggleCheckboxes(form, check) {
   for (var i = 0; i < form.elements.length; i++) {
     var element = form.elements[i];
