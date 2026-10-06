@@ -22,4 +22,6 @@ urlpatterns = [
 
     path("tipos-costo/", views.tipos_costo_list, name="tipos_costo_list"),
     path("tipos-costo/nuevo/", views.tipo_costo_create, name="tipo_costo_create"),
+
+    path("dashboard/", views.dashboard, name="dashboard"),
 ]

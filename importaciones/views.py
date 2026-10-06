@@ -214,3 +214,85 @@ def tipo_costo_create(request):
     else:
         form = TipoCostoForm()
     return render(request, "importaciones/form.html", {"form": form, "titulo": "Nuevo tipo de costo"})
+
+
+# -----------------------
+# Dashboard / Reporting
+# -----------------------
+def dashboard(request):
+    # ----- Filter: importaciones seleccionadas via GET -----
+    # Parámetro: ?importacion_ids=1&importacion_ids=3  (lista múltiple)
+    selected_ids = request.GET.getlist("importacion_ids")
+    # Convertir a enteros para comparar con los IDs de la BD
+    selected_ids = [int(id) for id in selected_ids] if selected_ids else []
+    # Si no hay selección explícita, mostramos todas (initial behavior)
+    if selected_ids:
+        importaciones_seleccionadas = Importacion.objects.filter(id__in=selected_ids)
+    else:
+        importaciones_seleccionadas = Importacion.objects.order_by("-fecha", "-id")
+
+    # Derivadas de la selección
+    cotizaciones_seleccionadas = Cotizacion.objects.filter(
+        importacion__in=importaciones_seleccionadas
+    )
+    # FILTRAR: sólo items con empresa asociada, para los cálculos por empresa
+    cotizacionitems_seleccionados = CotizacionItem.objects.filter(
+        cotizacion__in=cotizaciones_seleccionadas,
+        empresa__isnull=False
+    )
+
+    # Métricas exclusivamente sobre importaciones seleccionadas
+    cantidad_importaciones_seleccionadas = importaciones_seleccionadas.count()
+    cantidad_cotizaciones_seleccionadas = cotizaciones_seleccionadas.count()
+    valor_total_cotizado = Decimal("0")
+    for cot in cotizaciones_seleccionadas:
+        valor_total_cotizado += cot.total()
+
+    # Número de empresas que participan en esas importaciones
+    empresas_participan = set()
+    for item in cotizacionitems_seleccionados:
+        if item.empresa:
+            empresas_participan.add(item.empresa)
+    numero_empresas_seleccionadas = len(empresas_participan)
+
+    # Top 5 empresas exclusivamente con los CotizacionItem de las importaciones seleccionadas
+    # empresa_costos: acumula valor_total por empresa
+    # empresa_importas: set de IDs de importacion distintas donde la empresa tiene al menos un item
+    empresa_costos = {}
+    empresa_importaciones = {}  # nombre -> set de IDs de importacion distintas
+    for item in cotizacionitems_seleccionados:
+        emp_nombre = item.empresa.nombre
+        empresa_costos.setdefault(emp_nombre, Decimal("0"))
+        empresa_costos[emp_nombre] += item.total_en_moneda_base()
+
+        # Track importaciones distintas por empresa (mismo item->c->imp, set auto-deduplica)
+        imp_id = item.cotizacion.importacion.id
+        empresa_importaciones.setdefault(emp_nombre, set())
+        empresa_importaciones[emp_nombre].add(imp_id)
+
+    # Construir lista Top 5 ordenada por valor total descendente
+    top_empresas = []
+    for nombre, costo_total in sorted(
+        empresa_costos.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )[:5]:
+        importaciones_distintas = len(empresa_importaciones.get(nombre, set()))
+        valor_promedio = costo_total / importaciones_distintas if importaciones_distintas > 0 else Decimal("0")
+        top_empresas.append({
+            "nombre": nombre,
+            "costo_total": costo_total,
+            "numero_importaciones": importaciones_distintas,
+            "valor_promedio": valor_promedio,
+        })
+
+    context = {
+        "importaciones": importaciones_seleccionadas,
+        "selected_ids": selected_ids,
+        "cantidad_importaciones_seleccionadas": cantidad_importaciones_seleccionadas,
+        "cantidad_cotizaciones_seleccionadas": cantidad_cotizaciones_seleccionadas,
+        "valor_total_cotizado": valor_total_cotizado,
+        "numero_empresas_seleccionadas": numero_empresas_seleccionadas,
+        "top_empresas": top_empresas,
+    }
+    return render(request, "importaciones/dashboard.html", context)
