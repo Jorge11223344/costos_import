@@ -1,0 +1,42 @@
+{% extends "importaciones/base.html" %}
+{% load humanize %}
+
+{% block title %}Eliminar cotización{% endblock %}
+
+{% block content %}
+<section class="py-4">
+  <div class="container">
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-secondary">
+          <div class="card-header">
+            <h5 class="mb-0">Confirmar eliminación</h5>
+          </div>
+          <div class="card-body">
+            <p>¿Estás seguro de querer eliminar la cotización <strong>{{ cot.nombre }}</strong>?</p>
+            <p><strong>Importación:</strong> {{ cot.importacion.referencia|default:"Importación" }}</p>
+            <p><strong>Total:</strong> {{ cot.total|floatformat:0|intcomma }} CLP</p>
+            <p class="text-warning"><strong>Advertencia:</strong> También se eliminarán los ítems de costo asociados a esta cotización.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-12">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-12 col-md-6">
+              <button type="submit" class="btn btn-danger w-100">Eliminar</button>
+            </div>
+            <div class="col-12 col-md-6">
+              <a class="btn btn-secondary w-100" href="{% url 'importaciones:importacion_detail' imp.id %}">Cancelar</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

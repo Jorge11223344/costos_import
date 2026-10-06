@@ -4,6 +4,7 @@ from django.contrib import messages
 from .models import Importacion, Cotizacion, CotizacionItem, Empresa, TipoCosto
 from .forms import ImportacionForm, CotizacionForm, CotizacionItemForm, EmpresaForm, TipoCostoForm
 from decimal import Decimal
+from collections import defaultdict
 
 
 # -----------------------
@@ -11,6 +12,7 @@ from decimal import Decimal
 # -----------------------
 def importaciones_list(request):
     importaciones = Importacion.objects.order_by("-fecha", "-id")
+
     for imp in importaciones:
         imp.kilos_utiles = (imp.kilos_estimados or 0) - (imp.kilos_merma or 0)
 
@@ -138,6 +140,30 @@ def cotizacion_edit(request, cotizacion_id):
 
 
 # -----------------------
+# Eliminar cotización
+# -----------------------
+def cotizacion_delete(request, cotizacion_id):
+    cot = get_object_or_404(Cotizacion, id=cotizacion_id)
+    imp = cot.importacion
+
+    if request.method == "POST":
+        # Borrar los items de costo asociados antes de borrar la cotización
+        # (usamos filter + delete en lugar de on_delete=CASCADE para mantener integridad)
+        cot.items.all().delete()
+
+        cot.delete()
+        messages.success(request, "Cotización eliminada.")
+        return redirect("importaciones:importacion_detail", importacion_id=imp.id)
+
+    # Mostrar página de confirmación para GET
+    context = {
+        "cot": cot,
+        "imp": imp,
+    }
+    return render(request, "importaciones/cotizacion_delete_confirm.html", context)
+
+
+# -----------------------
 # Items de costo
 # -----------------------
 def item_create(request, cotizacion_id):
@@ -217,6 +243,116 @@ def tipo_costo_create(request):
 
 
 # -----------------------
+# Comparador de cotizaciones
+# -----------------------
+def comparar(request, importacion_id):
+    imp = get_object_or_404(Importacion, id=importacion_id)
+    cotizaciones = imp.cotizaciones.order_by("-activa", "-id")
+    tipo_costos = TipoCosto.objects.order_by("categoria", "nombre")
+    kilos_utiles = (imp.kilos_estimados or 0) - (imp.kilos_merma or 0)
+    if kilos_utiles < 0:
+        kilos_utiles = 0
+
+    # Construir filas: una por cada TipoCosto, con valores por cotización
+    # Filtrar: sólo mostrar TipoCosto que aparezcan en al menos una cotización
+    tipo_costos_con_datos = []
+    for tc in tipo_costos:
+        # Verificar si este TipoCosto aparece en alguna cotización
+        tiene_datos = False
+        for cot in cotizaciones:
+            items = cot.items.select_related("tipo_costo").filter(tipo_costo=tc)
+            if items.exists():
+                tiene_datos = True
+                break
+        if tiene_datos:
+            tipo_costos_con_datos.append(tc)
+
+    # Construir filas: una por cada TipoCosto que tiene datos
+    filas_comparacion = []
+    for tc in tipo_costos_con_datos:
+        valores = []
+        for cot in cotizaciones:
+            # Sumar items de este TipoCosto para esta cotización
+            total = Decimal("0")
+            for item in cot.items.select_related("tipo_costo").filter(tipo_costo=tc):
+                total += item.total_en_moneda_base()
+            valores.append(total if total > 0 else Decimal("0"))
+        filas_comparacion.append({
+            "tipo_costo": tc.nombre,
+            "valores": valores,
+        })
+
+    # BLOQUE ADICIONAL: Matriz detallada Concepto × Empresa × Cotización
+    all_items = CotizacionItem.objects.filter(
+        cotizacion__in=cotizaciones
+    ).select_related("tipo_costo", "empresa")
+
+    grupos = defaultdict(lambda: defaultdict(lambda: Decimal("0")))
+
+    for item in all_items:
+        tc_nombre = item.tipo_costo.nombre
+        emp_nombre = item.empresa.nombre if item.empresa else "Sin empresa"
+        grupos[(tc_nombre, emp_nombre)][item.cotizacion_id] += item.total_en_moneda_base()
+
+    filas_detalle = []
+    for (tc_nombre, emp_nombre), cotizaciones_dict in grupos.items():
+        valores = []
+        for cot in cotizaciones:
+            val = cotizaciones_dict.get(cot.id, None)
+            if val == Decimal("0"):
+                val = None
+            valores.append(val)
+        filas_detalle.append({
+            "tipo_costo": tc_nombre,
+            "empresa": emp_nombre,
+            "valores": valores,
+        })
+
+    # Ordenar filas: primero los que tienen empresa "Sin empresa", luego alfabéticamente
+    filas_detalle.sort(key=lambda f: (f["empresa"] == "Sin empresa", f["tipo_costo"].lower()))
+
+    # Calcular costo por kg para cada cotización
+    resumen_cotizaciones = []
+    for cot in cotizaciones:
+        total = cot.total()
+        if kilos_utiles > 0:
+            costo_por_kg = total / kilos_utiles
+        else:
+            costo_por_kg = None
+        resumen_cotizaciones.append({
+            "cotizacion": cot,
+            "total": total,
+            "costo_por_kg": costo_por_kg,
+        })
+
+# Determinar la mejor cotización (menor total y menor costo/kg)
+    mejor_total = min(cotizaciones, key=lambda c: c.total()) if cotizaciones else None
+    # Calcular mejor_kg usando la lógica especificada
+    resumen_con_costo = [r for r in resumen_cotizaciones if r["costo_por_kg"] is not None]
+    mejor_kg = min(resumen_con_costo, key=lambda r: r["costo_por_kg"])["cotizacion"] if resumen_con_costo else None
+    # Costo por kg de la mejor cotización
+    if kilos_utiles > 0 and mejor_total:
+        mejor_costo_kg = mejor_total.total() / kilos_utiles
+    else:
+        mejor_costo_kg = None
+
+    context = {
+        "imp": imp,
+        "cotizaciones": cotizaciones,
+        "tipo_costos": tipo_costos,
+        "filas_comparacion": filas_comparacion,
+        "tipo_costos_con_datos": tipo_costos_con_datos,
+        "filas_detalle": filas_detalle,
+        "resumen_cotizaciones": resumen_cotizaciones,
+        "kilos_utiles": kilos_utiles,
+        "mejor_total": mejor_total,
+        "mejor_kg": mejor_kg,
+        "mejor_costo_kg": mejor_costo_kg,
+    }
+    return render(request, "importaciones/comparar.html", context)
+
+
+# -----------------------
 # Dashboard / Reporting
 # -----------------------
 # Dashboard / Reporting
@@ -258,12 +394,23 @@ def dashboard(request):
         empresa__isnull=False
     )
 
-    # Métricas exclusivamente sobre importaciones seleccionadas
+# Métricas exclusivamente sobre importaciones seleccionadas
     cantidad_importaciones_seleccionadas = importaciones_seleccionadas.count()
     cantidad_cotizaciones_seleccionadas = cotizaciones_seleccionadas.count()
-    valor_total_cotizado = Decimal("0")
-    for cot in cotizaciones_seleccionadas:
-        valor_total_cotizado += cot.total()
+    
+    # VALOR TOTAL SOLAMENTE IMPORTACIONES FINALIZADAS
+    # Considerar somente Importacion con estado="finalizada"
+    # Tomar las Cotizacion asociadas a esas importaciones finalizadas
+    # Sumar Cotizacion.total()
+    # Si el usuario aplica el selector manual de importaciones:
+    # - el valor debe considerar solo las importaciones seleccionadas que además tengan estado="finalizada"
+    importaciones_finalizadas = importaciones_seleccionadas.filter(estado="finalizada")
+    cotizaciones_finalizadas = Cotizacion.objects.filter(
+        importacion__in=importaciones_finalizadas
+    )
+    valor_total_importaciones_finalizadas = Decimal("0")
+    for cot in cotizaciones_finalizadas:
+        valor_total_importaciones_finalizadas += cot.total()
 
     # Número de empresas que participan en esas importaciones
     empresas_participan = set()
@@ -310,7 +457,7 @@ def dashboard(request):
         "estados": Importacion.Estado.choices,
         "cantidad_importaciones_seleccionadas": cantidad_importaciones_seleccionadas,
         "cantidad_cotizaciones_seleccionadas": cantidad_cotizaciones_seleccionadas,
-        "valor_total_cotizado": valor_total_cotizado,
+        "valor_total_importaciones_finalizadas": valor_total_importaciones_finalizadas,
         "numero_empresas_seleccionadas": numero_empresas_seleccionadas,
         "top_empresas": top_empresas,
     }
