@@ -58,6 +58,16 @@
         Dashboard
       </a>
 
+      <a class="btn btn-sm
+         {% if '/evolucion/' in request.path %}
+            btn-light
+         {% else %}
+            btn-outline-light
+         {% endif %}"
+        href="{% url 'importaciones:evolucion' %}">
+        Evolución
+      </a>
+
     </div>
   </div>
 </nav>

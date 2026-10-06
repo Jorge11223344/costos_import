@@ -26,5 +26,6 @@ urlpatterns = [
     path("tipos-costo/nuevo/", views.tipo_costo_create, name="tipo_costo_create"),
 
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("evolucion/", views.evolucion, name="evolucion"),
     path("<int:importacion_id>/comparar/", views.comparar, name="comparar"),
 ]

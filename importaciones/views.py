@@ -462,3 +462,229 @@ def dashboard(request):
         "top_empresas": top_empresas,
     }
     return render(request, "importaciones/dashboard.html", context)
+
+# -----------------------
+# Análisis de evolución de importaciones
+# -----------------------
+def evolucion(request):
+    # Filtro: importaciones seleccionadas via GET
+    selected_ids = request.GET.getlist("importacion_ids")
+    selected_ids = [int(id) for id in selected_ids] if selected_ids else []
+    # Filtro por estado en la lista
+    selected_estado_lista = request.GET.get("estado", "")
+
+    # 1. Crear queryset base con todas las importaciones (excluyendo simulacion y cancelada)
+    importaciones_base = Importacion.objects.exclude(
+        estado__in=["simulacion", "cancelada"]
+    ).order_by("-fecha", "-id")
+
+    # Aplicar filtro manual de importacion_ids si viene
+    if selected_ids:
+        importaciones_base = importaciones_base.filter(id__in=selected_ids)
+
+    # Determinar el estado activo para el filtro de la tabla
+    # "Todas" = mostrar tanto finalizadas como en_curso
+    # "Finalizadas" = solo finalizadas
+    # "En curso" = solo en_curso
+    if selected_estado_lista == "finalizadas":
+        importaciones_queryset = importaciones_base.filter(estado=Importacion.Estado.FINALIZADA)
+    elif selected_estado_lista == "en_curso":
+        importaciones_queryset = importaciones_base.filter(estado=Importacion.Estado.EN_CURSO)
+    else:
+        importaciones_queryset = importaciones_base
+
+    # 2. Calcular métricas por importación
+    filas = []
+    importaciones_finalizadas_list = []
+    importaciones_en_curso_list = []
+
+    # Primer pasada: obtener datos y clasificar
+    for imp in importaciones_queryset:
+        kilos_utiles = (imp.kilos_estimados or 0) - (imp.kilos_merma or 0)
+        if kilos_utiles < 0:
+            kilos_utiles = 0
+
+        # Costo total: sumar todas las cotizaciones de esta importación
+        cotizaciones_imp = imp.cotizaciones.all()
+        costo_total = Decimal("0")
+        for cot in cotizaciones_imp:
+            costo_total += cot.total()
+
+        # Costo por kg
+        costo_por_kg = None
+        if kilos_utiles > 0:
+            # Buscar costo por kg entre las cotizaciones
+            # Usar el costo total / kilos utiles como criterio
+            costo_por_kg = costo_total / kilos_utiles
+
+        # Porcentaje de merma
+        porcentaje_merma = None
+        if imp.kilos_estimados and imp.kilos_estimados > 0:
+            porcentaje_merma = (imp.kilos_merma or 0) / imp.kilos_estimados * 100
+
+        # Clasificar por estado
+        if imp.estado == Importacion.Estado.FINALIZADA:
+            importaciones_finalizadas_list.append(imp)
+        elif imp.estado == Importacion.Estado.EN_CURSO:
+            importaciones_en_curso_list.append(imp)
+
+        filas.append({
+            "importacion": imp,
+            "estado": imp.estado,
+            "fecha": imp.fecha,
+            "referencia": imp.referencia,
+            "kilos_estimados": imp.kilos_estimados or 0,
+            "kilos_merma": imp.kilos_merma or 0,
+            "kilos_utiles": kilos_utiles,
+            "porcentaje_merma": porcentaje_merma,
+            "costo_total": costo_total,
+            "costo_por_kg": costo_por_kg,
+        })
+
+# 3. Calcular variación respecto de la última importación finalizada anterior
+    # Para cada importación, encontrar la última finalizada cronológicamente anterior
+    filas_con_variacion = []
+    for fila in filas:
+        imp = fila["importacion"]
+        # Buscar la última importación finalizada con fecha anterior a esta (usando fecha + id para desempate)
+        costo_kg_referencia = None
+        variacion_porcentaje = None
+
+        anteriores = Importacion.objects.filter(
+            estado=Importacion.Estado.FINALIZADA,
+            fecha__lt=imp.fecha
+        ).order_by("-fecha", "-id")  # más reciente primera para el desempate
+
+        if anteriores.exists():
+            ant = anteriores[0]
+            k_u_ant = (ant.kilos_estimados or 0) - (ant.kilos_merma or 0)
+            if k_u_ant > 0:
+                cots_ant = ant.cotizaciones.all()
+                ct_ant = Decimal("0")
+                for cot in cots_ant:
+                    ct_ant += cot.total()
+                costo_kg_referencia = ct_ant / k_u_ant
+                # Calcular variación
+                if fila["costo_por_kg"] is not None and costo_kg_referencia is not None and costo_kg_referencia != 0:
+                    variacion_porcentaje = (
+                        (fila["costo_por_kg"] - costo_kg_referencia) / costo_kg_referencia * 100
+                    )
+                else:
+                    variacion_porcentaje = None
+            else:
+                costo_kg_referencia = None
+
+        fila["costo_kg_referencia"] = costo_kg_referencia
+        fila["variacion_porcentaje"] = variacion_porcentaje
+        filas_con_variacion.append(fila)
+
+    # Conjunto de todas las finalizadas (para métricas resumidas)
+    todas_finalizadas_asc = Importacion.objects.filter(
+        estado=Importacion.Estado.FINALIZADA
+    ).order_by("fecha")
+
+    # Datos para el gráfico: lista cronológica de costo por kg
+    # Orden ascendente (más antigua a más reciente) según el filtro actual
+    # Las filas ya vienen filtradas por importaciones_queryset, entonces el gráfico
+    # muestra exactamente el mismo conjunto que la tabla
+    chart_data = []
+    filas_ordenadas = sorted(filas_con_variacion, key=lambda f: (f["fecha"], f["importacion"].id))
+    for fila in filas_ordenadas:
+        costo_kg = fila["costo_por_kg"]
+        chart_data.append({
+            "x": fila["fecha"],
+            "referencia": fila["referencia"] or "—",
+            "estado": fila["importacion"].get_estado_display(),
+            "costo_kg": float(costo_kg) if costo_kg is not None else None,
+        })
+
+    # 4. Calcular resumen superior usando el MISMO CONJUNTO filtrado
+    # que muestra la tabla y el gráfico (importaciones_queryset)
+    
+    # Cantidad de importaciones finalizadas en el conjunto filtrado
+    cantidad_finalizadas = importaciones_queryset.filter(
+        estado=Importacion.Estado.FINALIZADA
+    ).count()
+
+    # Cantidad de importaciones en curso en el conjunto filtrado
+    cantidad_en_curso = importaciones_queryset.filter(
+        estado=Importacion.Estado.EN_CURSO
+    ).count()
+
+    # Costo/kg promedio de importaciones finalizadas en el conjunto filtrado
+    costo_kg_promedio_finalizadas = Decimal("0")
+    finalizadas_filtradas = importaciones_queryset.filter(
+        estado=Importacion.Estado.FINALIZADA
+    )
+    costos_kg_finalizadas = []
+    for imp in finalizadas_filtradas:
+        k_u = (imp.kilos_estimados or 0) - (imp.kilos_merma or 0)
+        if k_u > 0:
+            cots = imp.cotizaciones.all()
+            ct = Decimal("0")
+            for cot in cots:
+                ct += cot.total()
+            costos_kg_finalizadas.append(ct / k_u)
+
+    if costos_kg_finalizadas:
+        costo_kg_promedio_finalizadas = sum(costos_kg_finalizadas) / len(costos_kg_finalizadas)
+
+    # Último costo/kg real (la última finalizada cronológicamente en el conjunto filtrado)
+    ultimo_costo_kg_real = None
+    finalizadas_ordenadas = importaciones_queryset.filter(
+        estado=Importacion.Estado.FINALIZADA
+    ).order_by("fecha", "id")
+    if finalizadas_ordenadas.exists():
+        imp_ult = finalizadas_ordenadas.last()
+        k_u = (imp_ult.kilos_estimados or 0) - (imp_ult.kilos_merma or 0)
+        if k_u > 0:
+            cots_ult = imp_ult.cotizaciones.all()
+            ct_ult = Decimal("0")
+            for cot in cots_ult:
+                ct_ult += cot.total()
+            ultimo_costo_kg_real = ct_ult / k_u
+
+    # Costo/kg de la importación en curso más reciente en el conjunto filtrado
+    ultima_en_curso = None
+    importaciones_en_curso_filtradas = importaciones_queryset.filter(
+        estado=Importacion.Estado.EN_CURSO
+    ).order_by("-fecha", "-id")
+    if importaciones_en_curso_filtradas.exists():
+        ultima_en_curso = importaciones_en_curso_filtradas[0]
+    costo_kg_ultima_en_curso = None
+    if ultima_en_curso:
+        k_u = (ultima_en_curso.kilos_estimados or 0) - (ultima_en_curso.kilos_merma or 0)
+        if k_u > 0:
+            cots_uc = ultima_en_curso.cotizaciones.all()
+            ct_uc = Decimal("0")
+            for cot in cots_uc:
+                ct_uc += cot.total()
+            costo_kg_ultima_en_curso = ct_uc / k_u
+
+    # Variación de la importación en curso más reciente respecto de la última finalizada
+    variacion_ultima_en_curso = None
+    if ultima_en_curso and ultimo_costo_kg_real is not None:
+        if costo_kg_ultima_en_curso is not None and ultimo_costo_kg_real != 0:
+            variacion_ultima_en_curso = (
+                (costo_kg_ultima_en_curso - ultimo_costo_kg_real) / ultimo_costo_kg_real * 100
+            )
+
+    # 5. Context
+    context = {
+        "importaciones": importaciones_queryset,
+        "filas": filas_con_variacion,
+        "selected_ids": selected_ids,
+        "selected_estado_lista": selected_estado_lista,
+        "estados_choices": Importacion.Estado.choices,
+        "cantidad_finalizadas": cantidad_finalizadas,
+        "cantidad_en_curso": cantidad_en_curso,
+        "costo_kg_promedio_finalizadas": costo_kg_promedio_finalizadas,
+        "ultimo_costo_kg_real": ultimo_costo_kg_real,
+        "costo_kg_ultima_en_curso": costo_kg_ultima_en_curso,
+        "variacion_ultima_en_curso": variacion_ultima_en_curso,
+        "importaciones_finalizadas_list": importaciones_finalizadas_list,
+        "importaciones_en_curso_list": importaciones_en_curso_list,
+        "chart_data": chart_data,
+        "ultima_en_curso": ultima_en_curso,
+    }
+    return render(request, "importaciones/evolucion.html", context)
