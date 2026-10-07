@@ -275,7 +275,7 @@ var valoresCosto = chartData
   .filter(function(v) { return v !== null && !isNaN(v); });
 
 var yMin = 0;
-var yMax = 1000;
+var yMax = null;
 
 if (valoresCosto.length > 0) {
   var minimo = Math.min.apply(null, valoresCosto);
@@ -320,6 +320,7 @@ var myChart = new Chart(ctx, {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      resize: true,
       interpolation: 'monotone',
       scales: {
         x: {
@@ -425,5 +426,8 @@ var myChart = new Chart(ctx, {
   if (chartData.length > 0) {
     actualizarGrafico();
   }
+
+  // Actualizar gráfico al redimensionar ventana
+  window.addEventListener('resize', actualizarGrafico);
 </script>
 {% endblock %}
