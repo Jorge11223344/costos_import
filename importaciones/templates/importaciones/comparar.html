@@ -16,11 +16,18 @@
       </div>
     </div>
 
+    <!-- Botón de impresión -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <button class="btn btn-sm btn-outline-secondary float-end" onclick="window.print()">Imprimir comparación</button>
+      </div>
+    </div>
+
     <!-- Card: Detalle por concepto y empresa -->
     <div class="card mb-4">
       <div class="card-header">Detalle por concepto y empresa</div>
       <div class="card-body table-responsive">
-        <table class="table table-sm table-bordered mb-0">
+        <table class="table table-sm table-bordered mb-0 data-table">
           <thead>
             <tr>
               <th style="width: 30%">Concepto</th>
@@ -64,7 +71,7 @@
       <div class="card-header">Resumen de cotizaciones</div>
       <div class="card-body table-responsive">
         <!-- Tabla comparativa Cotización → Total → Costo por kg -->
-        <table class="table table-sm table-bordered mb-0">
+        <table class="table table-sm table-bordered mb-0 data-table">
           <thead>
             <tr>
               <th style="width: 35%">Cotización</th>

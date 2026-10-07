@@ -25,7 +25,7 @@
                     </label>
                   </div>
                 {% empty %}
-                  <p class="small text-muted">No hay importaciones disponibles.</p>
+                  <p class="small text-muted">No hay importaciones aún.</p>
                 {% endfor %}
               </div>
 <div class="col-12 col-md-8">
@@ -107,6 +107,24 @@ function toggleCheckboxes(form, check) {
           <div class="card-body">
             <h5 class="card-title">Número empresas</h5>
             <h3 class="card-number">{{ numero_empresas_seleccionadas }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de acción superior -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-secondary">
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-6">
+                <button class="btn btn-sm btn-primary w-100" onclick="window.print()">Imprimir resumen</button>
+              </div>
+              <div class="col-6">
+                <a href="{% url 'importaciones:importaciones_list' %}" class="btn btn-sm btn-outline-secondary w-100">Ir a importaciones</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
