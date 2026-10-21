@@ -13,6 +13,8 @@ urlpatterns = [
     path("cotizacion/<int:cotizacion_id>/", views.cotizacion_detail, name="cotizacion_detail"),
     path("cotizacion/<int:cotizacion_id>/editar/", views.cotizacion_edit, name="cotizacion_edit"),
 
+    path("cotizacion/<int:cotizacion_id>/eliminar/", views.cotizacion_delete, name="cotizacion_delete"),
+
     path("cotizacion/<int:cotizacion_id>/item/nuevo/", views.item_create, name="item_create"),
     path("item/<int:item_id>/editar/", views.item_edit, name="item_edit"),
     path("item/<int:item_id>/eliminar/", views.item_delete, name="item_delete"),
@@ -22,4 +24,8 @@ urlpatterns = [
 
     path("tipos-costo/", views.tipos_costo_list, name="tipos_costo_list"),
     path("tipos-costo/nuevo/", views.tipo_costo_create, name="tipo_costo_create"),
+
+    path("dashboard/", views.dashboard, name="dashboard"),
+    path("evolucion/", views.evolucion, name="evolucion"),
+    path("<int:importacion_id>/comparar/", views.comparar, name="comparar"),
 ]

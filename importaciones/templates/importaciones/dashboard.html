@@ -1,0 +1,179 @@
+{% extends "importaciones/base.html" %}
+{% load humanize %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="py-4">
+  <div class="container">
+    <!-- ======= FILTRO DE IMPORTACIONES ====== -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-secondary">
+          <div class="card-header">
+            <h5 class="mb-0">Filtrar por importación</h5>
+          </div>
+          <div class="card-body p-0">
+            <form method="get" class="row g-2" onsubmit="return validateForm(this)">
+              <div class="col-12 col-md-4">
+                <h6 class="small text-muted">Importaciones disponibles</h6>
+                {% for imp in importaciones %}
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="importacion_ids" value="{{ imp.id }}" {% if imp.id in selected_ids %}checked{% endif %}>
+                    <label class="form-check-label">
+                      {{ imp.fecha }} - {{ imp.referencia|default:"—" }}
+                    </label>
+                  </div>
+                {% empty %}
+                  <p class="small text-muted">No hay importaciones aún.</p>
+                {% endfor %}
+              </div>
+<div class="col-12 col-md-8">
+                <h6 class="small text-muted mb-2">Filtrar por estado</h6>
+                <select name="estado" class="form-select form-select-sm">
+                  <option value="">Todas</option>
+                  {% for valor, nombre in estados %}
+                    <option value="{{ valor }}" {% if selected_estado == valor %}selected{% endif %}>
+                      {{ nombre }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <small class="text-muted mt-1">Si no selecciona nada, se considerarán todas las importaciones.</small>
+                <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">Aplicar filtro</button>
+                <a href="" class="btn btn-sm btn-outline-secondary w-100 mt-2" onclick="toggleCheckboxes(document.forms[0], false); return false">Limpiar selección</a>
+              </div>
+
+            <script>
+function toggleCheckboxes(form, check) {
+  for (var i = 0; i < form.elements.length; i++) {
+    var element = form.elements[i];
+    if (element.name && element.name === 'importacion_ids') {
+      element.checked = check;
+    }
+  }
+}
+</script>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de importaciones seleccionadas (visible cuando hay filtro) -->
+    {% if selected_ids %}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="alert alert-info">
+          <small>Mostrando resultados para <strong>{{ cantidad_importaciones_seleccionadas }}</strong> importación(es) seleccionada(s)</small>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ======= MÉTRICAS DEL DASHBOARD ====== -->
+    <div class="row g-4">
+      <!-- Tarjeta: Cantidad de importaciones seleccionadas -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-primary">
+          <div class="card-body">
+            <h5 class="card-title">Cantidad importaciones seleccionadas</h5>
+            <h3 class="card-number">{{ cantidad_importaciones_seleccionadas }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta: Cantidad de cotizaciones -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-success">
+          <div class="card-body">
+            <h5 class="card-title">Cantidad cotizaciones</h5>
+            <h3 class="card-number">{{ cantidad_cotizaciones_seleccionadas }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta: Valor total importaciones finalizadas -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-info">
+          <div class="card-body">
+            <h5 class="card-title">Valor total importaciones finalizadas</h5>
+            <h3 class="card-number">{{ valor_total_importaciones_finalizadas|floatformat:0|intcomma }} CLP</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta: Número de empresas -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-warning">
+          <div class="card-body">
+            <h5 class="card-title">Número empresas</h5>
+            <h3 class="card-number">{{ numero_empresas_seleccionadas }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de acción superior -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-secondary">
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-6">
+                <button class="btn btn-sm btn-primary w-100" onclick="window.print()">Imprimir resumen</button>
+              </div>
+              <div class="col-6">
+                <a href="{% url 'importaciones:importaciones_list' %}" class="btn btn-sm btn-outline-secondary w-100">Ir a importaciones</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= TOP 5 EMPRESAS POR VALOR COTIZADO ====== -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card border-secondary">
+          <div class="card-header">
+            <h4 class="mb-0">Top 5 empresas por valor cotizado</h4>
+          </div>
+          <div class="card-body p-0">
+            {% if top_empresas %}
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0">
+                  <thead>
+                    <tr>
+                      <th style="width: 25%">Empresa</th>
+                      <th style="width: 25%">Importaciones en que participó</th>
+                      <th style="width: 25%">Valor total</th>
+                      <th style="width: 25%">Promedio por importación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for ep in top_empresas %}
+                      <tr>
+                        <td>{{ ep.nombre }}</td>
+                        <td class="text-center">{{ ep.numero_importaciones }}</td>
+                        <td class="text-end">{{ ep.costo_total|default:0|floatformat:0|intcomma }} CLP</td>
+                        <td class="text-end">{{ ep.valor_promedio|default:0|floatformat:0|intcomma }} CLP</td>
+                      </tr>
+                    {% empty %}
+                      <tr>
+                        <td colspan="4" class="text-center">No hay ítems de costo asociados a empresas con las importaciones seleccionadas</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="alert alert-info text-center">
+                No hay ítems de costo asociados a empresas con las importaciones seleccionadas.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from .models import Empresa, TipoCosto, Importacion, Cotizacion, CotizacionItem
 
 
@@ -17,7 +18,15 @@ class TipoCostoForm(forms.ModelForm):
 class ImportacionForm(forms.ModelForm):
     class Meta:
         model = Importacion
-        fields = ["fecha", "referencia", "incoterm", "pol", "pod", "kilos_estimados", "kilos_merma", "moneda_base"]
+        fields = ["fecha", "referencia", "incoterm", "pol", "pod", "kilos_estimados", "kilos_merma", "moneda_base", "estado"]
+        widgets = {
+            "fecha": forms.DateInput(attrs={"type": "date", "class": "form-control", "required": True}, format="%Y-%m-%d"),
+            "pol": forms.TextInput(attrs={"placeholder": "Ej: Callao", "class": "form-control", "required": True}),
+            "pod": forms.TextInput(attrs={"placeholder": "Ej: Valparaíso", "class": "form-control", "required": True}),
+            "referencia": forms.TextInput(attrs={"placeholder": "Ej: Contenedor Tianjin Sep-2025", "class": "form-control", "required": True}),
+            "kilos_estimados": forms.NumberInput(attrs={"step": "0.1", "class": "form-control", "required": True}),
+            "estado": forms.Select(attrs={"class": "form-control", "required": True}),
+        }
 
 
 class CotizacionForm(forms.ModelForm):

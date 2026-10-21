@@ -11,8 +11,11 @@
   <div class="d-flex gap-2">
     <a class="btn btn-outline-secondary" href="{% url 'importaciones:importacion_edit' imp.id %}">Editar</a>
     <a class="btn btn-primary" href="{% url 'importaciones:cotizacion_create' imp.id %}">➕ Nueva cotización</a>
+    <a class="btn btn-outline-info" href="{% url 'importaciones:comparar' imp.id %}">Comparar cotizaciones</a>
   </div>
 </div>
+
+<strong>Estado:</strong> <span class="badge badge-{{ imp.get_estado_display|lower }}">{{ imp.get_estado_display }}</span>
 
 <h5>Cotizaciones</h5>
 <table class="table table-sm bg-white">
@@ -32,6 +35,7 @@
       <td class="text-end">{{ c.total|floatformat:1 }}</td>
       <td class="text-end">
         <a class="btn btn-sm btn-outline-primary" href="{% url 'importaciones:cotizacion_detail' c.id %}">Abrir</a>
+        <a class="btn btn-sm btn-outline-danger" href="{% url 'importaciones:cotizacion_delete' c.id %}">Eliminar</a>
       </td>
     </tr>
     {% empty %}

@@ -1,0 +1,440 @@
+{% extends "importaciones/base.html" %}
+{% load humanize %}
+
+{% block title %}Análisis de evolución de importaciones{% endblock %}
+
+{% block content %}
+<section class="py-4">
+  <div class="container">
+    <!-- ======= FILTROS ====== -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-secondary">
+          <div class="card-header">
+            <h5 class="mb-0">Filtrar importaciones</h5>
+          </div>
+          <div class="card-body">
+            <form method="get" class="row g-2">
+              <div class="col-12 col-md-4">
+                <h6 class="small text-muted">Mostrar</h6>
+                <select name="estado" class="form-select form-select-sm" onchange="this.form.submit()">
+                  <option value="todas" {% if selected_estado_lista == "todas" %}selected{% endif %}>
+                    Todas
+                  </option>
+                  <option value="finalizadas" {% if selected_estado_lista == "finalizadas" %}selected{% endif %}>
+                    Finalizadas
+                  </option>
+                  <option value="en_curso" {% if selected_estado_lista == "en_curso" %}selected{% endif %}>
+                    En curso
+                  </option>
+                </select>
+              </div>
+              <div class="col-12 col-md-4">
+                <h6 class="small text-muted">Importaciones seleccionadas</h6>
+                <select multiple class="form-select form-select-sm" name="importacion_ids" id="id_importacion_ids" style="height: 100px;">
+                  {% for imp in importaciones %}
+                    <option value="{{ imp.id }}" {% if imp.id in selected_ids %}selected{% endif %}>
+                      {{ imp.fecha }} - {{ imp.referencia|default:"—" }}
+                    </option>
+                  {% empty %}
+                    <option value="" disabled>No hay importaciones disponibles</option>
+                  {% endfor %}
+                </select>
+                <small class="text-muted mt-1">Mantener Ctrl + clic para varios selecciones.</small>
+              </div>
+              <div class="col-12 col-md-4">
+                <button type="submit" class="btn btn-primary w-100">Aplicar</button>
+                <a href="" class="btn btn-outline-secondary w-100" onclick="limpiarFiltros(); return false">Limpiar</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= RESUMEN SUPERIOR ====== -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-3">
+        <div class="card h-100 border-success">
+          <div class="card-body">
+            <h5 class="card-title">Cantidad finalizadas</h5>
+            <h3 class="card-number">{{ cantidad_finalizadas }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card h-100 border-primary">
+          <div class="card-body">
+            <h5 class="card-title">Cantidad en curso</h5>
+            <h3 class="card-number">{{ cantidad_en_curso }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card h-100 border-info">
+          <div class="card-body">
+            <h5 class="card-title">Costo/kg promedio finalizadas</h5>
+            <h3 class="card-number">{{ costo_kg_promedio_finalizadas|floatformat:1|intcomma }} CLP</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card h-100 border-warning">
+          <div class="card-body">
+            <h5 class="card-title">Último costo/kg real</h5>
+            <h3 class="card-number">{{ ultimo_costo_kg_real|floatformat:0|intcomma }} CLP</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón de impresión -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <button class="btn btn-sm btn-outline-primary w-100" onclick="window.print()">Imprimir evolución de costos</button>
+      </div>
+    </div>
+
+    <!-- ======= GRÁFICO DE EVOLUCIÓN DEL COSTO POR KG ====== -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-secondary">
+          <div class="card-header">
+            <h5 class="mb-0">Evolución del costo por kg</h5>
+            <small class="text-muted">Comparación entre importaciones finalizadas y en curso</small>
+          </div>
+          <div class="card-body">
+            <canvas id="evolucionCostoKg" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional: variación de la en curso más reciente -->
+    {% if variacion_ultima_en_curso is not none %}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="alert alert-info">
+          <strong>Última importación en curso:</strong> {{ ultima_en_curso.fecha|default:"—" }} - {{ ultima_en_curso.referencia|default:"—" }}
+          <br>
+          Costo/kg: {{ costo_kg_ultima_en_curso|floatformat:0|intcomma }} CLP
+          {% if variacion_ultima_en_curso > 0 %}(+{{ variacion_ultima_en_curso|floatformat:1 }}%){% elif variacion_ultima_en_curso < 0 %}({{ variacion_ultima_en_curso|floatformat:1 }}%){% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ======= TABLA PRINCIPAL ====== -->
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered mb-0 data-table">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Referencia</th>
+            <th>Kilos estimados</th>
+            <th>Merma kg</th>
+            <th>% Merma</th>
+            <th>Costo total</th>
+            <th>Costo/kg</th>
+            <th>Variación</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fila in filas %}
+          <tr>
+            <td>
+              <span class="badge {% if fila.importacion.estado == 'finalizada' %}bg-success{% else %}bg-info{% endif %}">
+                {{ fila.importacion.get_estado_display }}
+              </span>
+            </td>
+            <td>{{ fila.fecha|date:"M Y" }}</td>
+            <td>{{ fila.referencia|default:"—" }}</td>
+            <td class="text-end">{{ fila.kilos_estimados|default:0|floatformat:0|intcomma }}</td>
+            <td class="text-end">{{ fila.kilos_merma|default:0|floatformat:0|intcomma }}</td>
+            <td class="text-end">
+              {% if fila.porcentaje_merma is not none %}
+                {{ fila.porcentaje_merma|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="text-end">{{ fila.costo_total|floatformat:0|intcomma }} CLP</td>
+            <td class="text-end">
+              {% if fila.costo_por_kg is not none %}
+                {{ fila.costo_por_kg|floatformat:0|intcomma }} CLP
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if fila.variacion_porcentaje is not none %}
+                {% if fila.variacion_porcentaje > 0 %}+{{ fila.variacion_porcentaje|floatformat:1 }}%{% elif fila.variacion_porcentaje < 0 %}{{ fila.variacion_porcentaje|floatformat:1 }}%{% endif %}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center">No hay importaciones con los filtros aplicados.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ======= DETALLE POR ESTADO ====== -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card border-info">
+          <div class="card-header">
+            <h5 class="mb-0">Importaciones por estado</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-6">
+                <span class="badge bg-success me-2">Finalizadas</span>
+                <small class="d-block">Importaciones finalizadas físicamente</small>
+              </div>
+              <div class="col-6">
+                <span class="badge bg-info me-2">En curso</span>
+                <small class="d-block">Operaciones en curso con costos estimados</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Modal para detalle de importación -->
+<div class="modal fade" id="importacionModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Detalle de importación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Será cargado vía AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function limpiarFiltros() {
+  document.getElementById("id_importacion_ids").value = '';
+  document.querySelector('form[method=get]').submit();
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+{{ chart_data|json_script:"chart-data" }}
+
+<script>
+  // Datos para el gráfico desde Django context
+  var ctx = document.getElementById('evolucionCostoKg').getContext('2d');
+  var chartData = JSON.parse(document.getElementById("chart-data").textContent);
+  
+  // Separar datos por estado
+  var finalizados = chartData.filter(function(d) { return d.estado === 'Finalizada'; });
+  var en_curso = chartData.filter(function(d) { return d.estado === 'En curso'; });
+  
+  // Ordenar cronológicamente (ya deberían estar ordenados, pero por seguridad)
+  finalizados.sort(function(a, b) { return a.x - b.x; });
+  en_curso.sort(function(a, b) { return a.x - b.x; });
+  
+  // Extraer labels y datos para Chart.js
+  var labelsFinalizados = finalizados.map(function(d) { return d.referencia || d.x; });
+  var datosFinalizados = finalizados.map(function(d) { return d.costo_kg; });
+  var labelsEnCurso = en_curso.map(function(d) { return d.referencia || d.x; });
+  var datosEnCurso = en_curso.map(function(d) { return d.costo_kg; });
+  
+  // Filtrar valores nulos
+  function filtrarNulos(labels, datos) {
+    var resultado = [];
+    for (var i = 0; i < labels.length; i++) {
+      if (datos[i] !== null && datos[i] !== undefined) {
+        resultado.push({label: labels[i], dato: datos[i]});
+      }
+    }
+    return resultado;
+  }
+  
+  var datosFiltradosFinalizados = filtrarNulos(labelsFinalizados, datosFinalizados);
+  var datosFiltradosEnCurso = filtrarNulos(labelsEnCurso, datosEnCurso);
+  
+  var gradientFinalizados = ctx.createLinearGradient(0, 0, 0, 150);
+  gradientFinalizados.addColorStop(0, 'rgba(72, 187, 133, 0.3)');
+  gradientFinalizados.addColorStop(1, 'rgba(72, 187, 133, 0.1)');
+  
+  var gradientEnCurso = ctx.createLinearGradient(0, 0, 0, 150);
+  gradientEnCurso.addColorStop(0, 'rgba(52, 152, 219, 0.3)');
+  gradientEnCurso.addColorStop(1, 'rgba(52, 152, 219, 0.1)');
+  
+  // Ajustar dinámicamente el rango del eje Y según los costos visibles
+var valoresCosto = chartData
+  .map(function(d) { return d.costo_kg; })
+  .filter(function(v) { return v !== null && !isNaN(v); });
+
+var yMin = 0;
+var yMax = null;
+
+if (valoresCosto.length > 0) {
+  var minimo = Math.min.apply(null, valoresCosto);
+  var maximo = Math.max.apply(null, valoresCosto);
+  var rango = maximo - minimo;
+
+  var margen = Math.max(rango * 0.15, 20);
+
+  yMin = Math.max(0, Math.floor((minimo - margen) / 10) * 10);
+  yMax = Math.ceil((maximo + margen) / 10) * 10;
+}
+
+var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: 'Finalizadas - costo real',
+          data: [],
+          borderColor: 'rgba(72, 187, 133, 1)',
+          backgroundColor: gradientFinalizados,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          zIndex: 10
+        },
+        {
+          label: 'En curso - costo estimado',
+          data: [],
+          borderColor: 'rgba(52, 152, 219, 1)',
+          backgroundColor: gradientEnCurso,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          zIndex: 5
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      resize: true,
+      interpolation: 'monotone',
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Fecha / Referencia'
+          },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45
+          }
+        },
+        y: {
+          beginAtZero: false,
+          min: yMin,
+          max: yMax,
+          title: {
+            display: true,
+            text: 'CLP/kg'
+          },
+          ticks: {
+            callback: function(value) {
+              return value % 1 === 0 ? value : '';
+            }
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: function(tooltipItem) {
+              var dato = chartData.find(d => d.referencia === tooltipItem[0].label || (d.x && d.x.toString() === tooltipItem[0].label));
+              if (!dato) return tooltipItem[0].label;
+              return 'Referencia: ' + (dato.referencia || '—');
+            },
+            label: function(tooltipItem) {
+              var dato = chartData.find(d => d.referencia === tooltipItem[0].label || (d.x && d.x.toString() === tooltipItem[0].label));
+              if (!dato) return '';
+              var costo = dato.costo_kg;
+              return 'Costo/kg: ' + (costo !== null ? costo.toLocaleString() + ' CLP' : '—');
+            }
+          }
+        },
+        legend: {
+          labels: {
+            generateLabels: function(chart) {
+              var data = chart.data;
+              return [
+                {
+                  text: 'Finalizadas - costo real',
+                  fillStyle: gradientFinalizados,
+                  strokeStyle: 'rgba(72, 187, 133, 1)',
+                  pointStyle: 'circle',
+                  hidden: false,
+                  lineWidth: 2
+                },
+                {
+                  text: 'En curso - costo estimado',
+                  fillStyle: gradientEnCurso,
+                  strokeStyle: 'rgba(52, 152, 219, 1)',
+                  pointStyle: 'circle',
+                  hidden: false,
+                  lineWidth: 2
+                }
+              ];
+            }
+          }
+        }
+      }
+    }
+  });
+  
+  // Actualizar labels después de que el gráfico se renderiza
+  // Chart.js no permite cambiar labels dinámicamente fácilmente, 
+  // así que reconstruimos si hay datos
+  function actualizarGrafico() {
+    var labels = [];
+    var datosFinalizadas = [];
+    var datosEnCurso = [];
+
+    chartData.forEach(function(d) {
+      labels.push(d.referencia || d.x);
+
+      if (d.estado === 'Finalizada') {
+        datosFinalizadas.push(d.costo_kg);
+        datosEnCurso.push(null);
+      } else if (d.estado === 'En curso') {
+        datosFinalizadas.push(null);
+        datosEnCurso.push(d.costo_kg);
+      } else {
+        datosFinalizadas.push(null);
+        datosEnCurso.push(null);
+      }
+    });
+
+    myChart.data.labels = labels;
+    myChart.data.datasets[0].data = datosFinalizadas;
+    myChart.data.datasets[1].data = datosEnCurso;
+    myChart.update();
+  }
+  
+  // Re-renderizar si hay datos
+  if (chartData.length > 0) {
+    actualizarGrafico();
+  }
+
+  // Actualizar gráfico al redimensionar ventana
+  window.addEventListener('resize', actualizarGrafico);
+</script>
+{% endblock %}
